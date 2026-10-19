@@ -1,4 +1,4 @@
-package com.saas.billing;
+package com.saas.billing.application;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
