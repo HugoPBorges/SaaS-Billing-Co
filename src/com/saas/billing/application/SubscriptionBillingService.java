@@ -8,6 +8,7 @@ import com.saas.billing.port.InvoiceRepository;
 import com.saas.billing.port.NotificationService;
 import com.saas.billing.port.PaymentGateway;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,22 +20,25 @@ public class SubscriptionBillingService {
     private final InvoiceRepository invoiceRepository;
     private final PaymentGateway paymentGateway;
     private final NotificationService notificationService;
+    private final Clock clock;
 
     public SubscriptionBillingService(CustomerRepository customerRepository,
                                       InvoiceRepository invoiceRepository,
                                       PaymentGateway paymentGateway,
-                                      NotificationService notificationService) {
+                                      NotificationService notificationService,
+                                      Clock clock) {
         this.customerRepository = customerRepository;
         this.invoiceRepository = invoiceRepository;
         this.paymentGateway = paymentGateway;
         this.notificationService = notificationService;
+        this.clock = clock;
     }
 
     public List<String> processMonthlyBilling(BillingCommand command) {
 
         List<String> logs = new ArrayList<>();
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
 
         int monthsActive = (today.getYear() - command.signupDate().getYear()) * 12 + (today.getMonthValue() - command.signupDate().getMonthValue());
 
