@@ -37,12 +37,8 @@ public class SubscriptionBillingService {
     public List<String> processMonthlyBilling(BillingCommand command) {
         List<String> logs = new ArrayList<>();
         Money price = pricingCalculator.calculateMonthlyPrice(command, LocalDate.now(clock));
-        try {
-            customerRepository.findById(command.customerId())
-                    .ifPresent(customer -> processCustomerBilling(command, customer, price, logs));
-        } catch (Exception e) {
-            logs.add("Erro fatal no processamento: " + e.getMessage());
-        }
+        customerRepository.findById(command.customerId())
+                .ifPresent(customer -> processCustomerBilling(command, customer, price, logs));
         return logs;
     }
 

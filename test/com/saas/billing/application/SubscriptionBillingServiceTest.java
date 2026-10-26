@@ -2,6 +2,8 @@ package com.saas.billing.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.saas.billing.domain.BillingCommand;
@@ -76,20 +78,21 @@ class SubscriptionBillingServiceTest {
     }
 
     @Test
-    void keepsPaymentLogWhenAFollowingOperationFails() {
+    void propagatesInfrastructureFailureToCaller() {
+        IllegalStateException failure = new IllegalStateException("database unavailable");
         SubscriptionBillingService service = service(
                 id -> Optional.of(new Customer(id, "client@example.com", "ACTIVE")),
                 (token, amount) -> true,
                 (id, amount, paid) -> {
-                    throw new IllegalStateException("database unavailable");
+                    throw failure;
                 },
                 (email, amount) -> { });
 
-        List<String> logs = service.processMonthlyBilling(command());
+        IllegalStateException thrown = assertThrows(
+                IllegalStateException.class,
+                () -> service.processMonthlyBilling(command()));
 
-        assertEquals(List.of(
-                "Pagamento processado com sucesso: R$ 85.00",
-                "Erro fatal no processamento: database unavailable"), logs);
+        assertSame(failure, thrown);
     }
 
     @Test
