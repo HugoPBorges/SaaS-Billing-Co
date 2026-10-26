@@ -1,5 +1,6 @@
 package com.saas.billing.application;
 
+import com.saas.billing.domain.BillingCommand;
 import com.saas.billing.domain.Money;
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -17,18 +18,15 @@ public class SubscriptionBillingService {
     private static final String DB_USER = "admin";
     private static final String DB_PASS = "admin123";
 
-    public List<String> processMonthlyBilling(String customerId, String planType, double basePrice,
-                                              String signupDateStr, int overdueDays, String promoCode,
-                                              boolean isNonProfit, String paymentCardToken) {
+    public List<String> processMonthlyBilling(BillingCommand command) {
 
         List<String> logs = new ArrayList<>();
 
-        LocalDate signupDate = LocalDate.parse(signupDateStr);
         LocalDate today = LocalDate.now();
 
-        int monthsActive = (today.getYear() - signupDate.getYear()) * 12 + (today.getMonthValue() - signupDate.getMonthValue());
+        int monthsActive = (today.getYear() - command.signupDate().getYear()) * 12 + (today.getMonthValue() - command.signupDate().getMonthValue());
 
-        Money base = Money.of(basePrice);
+        Money base = command.basePrice();
         Money calculatedPrice = base;
 
         if (monthsActive > 24) {
@@ -37,21 +35,21 @@ public class SubscriptionBillingService {
             calculatedPrice = calculatedPrice.subtract(base.multiply(new BigDecimal("0.10")));
         }
 
-        if (isNonProfit) {
+        if (command.nonProfit()) {
             calculatedPrice = calculatedPrice.multiply(new BigDecimal("0.70"));
         }
 
-        if (promoCode != null && !promoCode.trim().isEmpty()) {
-            if (promoCode.equalsIgnoreCase("BLACKFRIDAY") && today.getMonthValue() == 11) {
+        if (command.promoCode() != null && !command.promoCode().trim().isEmpty()) {
+            if (command.promoCode().equalsIgnoreCase("BLACKFRIDAY") && today.getMonthValue() == 11) {
                 calculatedPrice = calculatedPrice.subtract(Money.of("30.00"));
-            } else if (promoCode.equalsIgnoreCase("WELCOME10") && monthsActive <= 1) {
+            } else if (command.promoCode().equalsIgnoreCase("WELCOME10") && monthsActive <= 1) {
                 calculatedPrice = calculatedPrice.multiply(new BigDecimal("0.90"));
             }
         }
 
-        if (overdueDays > 0) {
+        if (command.overdueDays() > 0) {
             Money penalty = calculatedPrice.multiply(new BigDecimal("0.02"));
-            Money dailyInterest = calculatedPrice.multiply(new BigDecimal("0.001").multiply(BigDecimal.valueOf(overdueDays)));
+            Money dailyInterest = calculatedPrice.multiply(new BigDecimal("0.001").multiply(BigDecimal.valueOf(command.overdueDays())));
             calculatedPrice = calculatedPrice.add(penalty).add(dailyInterest);
         }
 
@@ -60,7 +58,7 @@ public class SubscriptionBillingService {
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS)) {
             String sqlCustomer = "SELECT email, status FROM customers WHERE id = ?";
             PreparedStatement stmt = conn.prepareStatement(sqlCustomer);
-            stmt.setString(1, customerId);
+            stmt.setString(1, command.customerId());
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
@@ -68,21 +66,21 @@ public class SubscriptionBillingService {
                 String status = rs.getString("status");
 
                 if (!"ACTIVE".equalsIgnoreCase(status)) {
-                    logs.add("Cliente inativo. Cobrança cancelada: " + customerId);
+                    logs.add("Cliente inativo. Cobrança cancelada: " + command.customerId());
                     return logs;
                 }
 
                 boolean paymentSuccess = false;
-                if (paymentCardToken != null && paymentCardToken.startsWith("tok_")) {
+                if (command.paymentCardToken() != null && command.paymentCardToken().startsWith("tok_")) {
                     paymentSuccess = true;
                     logs.add("Pagamento processado com sucesso: R$ " + calculatedPrice);
                 } else {
-                    logs.add("Falha no pagamento do cartão para: " + customerId);
+                    logs.add("Falha no pagamento do cartão para: " + command.customerId());
                 }
 
                 String sqlInvoice = "INSERT INTO invoices(customer_id, amount, status, created_at) VALUES (?, ?, ?, NOW())";
                 PreparedStatement stmtInvoice = conn.prepareStatement(sqlInvoice);
-                stmtInvoice.setString(1, customerId);
+                stmtInvoice.setString(1, command.customerId());
                 stmtInvoice.setBigDecimal(2, calculatedPrice.amount());
                 stmtInvoice.setString(3, paymentSuccess ? "PAID" : "FAILED");
                 stmtInvoice.executeUpdate();
