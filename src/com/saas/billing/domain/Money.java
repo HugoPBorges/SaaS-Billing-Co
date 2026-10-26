@@ -17,10 +17,6 @@ public record Money(BigDecimal amount) {
         return new Money(new BigDecimal(value));
     }
 
-    public static Money of(double value) {
-        return new Money(BigDecimal.valueOf(value));
-    }
-
     public Money add(Money other) {
         return new Money(amount.add(other.amount));
     }
@@ -31,10 +27,6 @@ public record Money(BigDecimal amount) {
 
     public Money multiply(BigDecimal factor) {
         return new Money(amount.multiply(factor));
-    }
-
-    public boolean isNegative() {
-        return amount.signum() < 0;
     }
 
     public Money max(Money other) {
