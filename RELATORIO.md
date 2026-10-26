@@ -14,3 +14,15 @@
 | 12–16; 59–63; 82–98 | **Single Responsibility Principle (SRP)** | A classe calcula preços, consulta clientes, grava faturas, simula pagamentos e prepara e-mails. | A concentração de responsabilidades aumenta o acoplamento, dificulta testes unitários e amplia o impacto de alterações. Uma mudança localizada pode causar regressões em diferentes etapas do processamento. |
 | 28–56 | **Long Method / mistura de regras de negócio** | Descontos, cupons, multa, juros e limite mínimo são calculados no mesmo método que coordena o processamento. | As regras ficam difíceis de testar isoladamente. Alterações na ordem das operações podem modificar o valor final, aumentando o risco de regressões. |
 | 18–20; 24; 28–56 | **Primitive Obsession** | Valores monetários usam double, a data chega como String e vários conceitos de negócio são representados por tipos primitivos. | A ausência de tipos específicos para conceitos de negócio dificulta a validação e favorece erros de representação. As regras ficam espalhadas, aumentando o custo de manutenção e de criação de testes confiáveis. |
+
+## Tabela comparativa de métricas antes e depois da refatoração
+
+| Métrica | Antes | Depois | Critério de medição |
+|---|---:|---:|---|
+| Linhas do método processMonthlyBilling | 88 | 7 | Linhas físicas entre a assinatura e a chave de fechamento, incluindo ambas. |
+| Parâmetros do método processMonthlyBilling | 8 | 1 | Parâmetros declarados na assinatura; a versão atual recebe apenas BillingCommand. |
+| Imports diretos de infraestrutura no serviço de aplicação | 5 | 0 | Imports de JDBC e Apache Commons Email em SubscriptionBillingService. |
+| Credenciais de infraestrutura fixas no serviço | 3 | 0 | Constantes de URL, usuário e senha do banco declaradas no serviço. |
+| Chamadas de data sem Clock injetado | 1 | 0 | Uso de LocalDate.now() sem uma fonte de tempo controlável. |
+| Capturas genéricas de Exception | 1 | 0 | Ocorrências de catch (Exception e) no código de produção. |
+| Casos de teste unitário automatizados | 0 | 10 | Métodos anotados com @Test na suíte Maven. |

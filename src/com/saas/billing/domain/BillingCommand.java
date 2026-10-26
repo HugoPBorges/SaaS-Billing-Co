@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.util.Objects;
 
 public record BillingCommand(String customerId,
-                             String planType,
                              Money basePrice,
                              LocalDate signupDate,
                              int overdueDays,
